@@ -3,7 +3,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import ugettext as _
 
-# Make sure you have Mandrill as your email backend
+# Make sure you have Djrill as your email backend
 
 class TemplateBackend(vanilla_django.TemplateBackend):
     def __init__(self, *args, **kwargs):
@@ -17,6 +17,7 @@ class TemplateBackend(vanilla_django.TemplateBackend):
         msg = EmailMessage(from_email=from_email, to=recipient_list)
         msg.template_name = template_name
         msg.global_merge_vars = context
+        msg.fail_silently = fail_silently
 
         if cc:
             msg.cc = cc
@@ -27,5 +28,9 @@ class TemplateBackend(vanilla_django.TemplateBackend):
         msg.use_template_from = kwargs.get('use_template_from', True)
         msg.async = kwargs.get('async', True)
 
-        msg.send()
-        return msg.mandrill_response
+        try:
+            msg.send()
+        except Exception as e:
+            if not fail_silently:
+                raise
+        return msg.extra_headers.get('Message-Id', None)
